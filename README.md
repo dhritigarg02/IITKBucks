@@ -1,1 +1,1 @@
-# IITKBucks-Assignments
+# IITKBucks
