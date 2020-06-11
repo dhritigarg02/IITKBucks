@@ -12,12 +12,14 @@ def ValidateTxn(Txn, unused_outputs):
 
     for Input in Txn.inputs:
         try:
-            total_input_coins += unused_outputs[Input.transID][Input.index]["coins"]
+            total_input_coins += unused_outputs[Input.transID][Input.index]["coins"] 
+            # assuming unused_outputs to be of the form 
+            # unused_outputs = {txnID : {index : {Publickey : "xxxx", "coins" : _num_}}}
         except:
             flag = False
             return flag
     for Output in Txn.outputs:
-        total_output_coins += int.from_bytes(Output.amount, 'big')
+        total_output_coins += Output.amount
 
     if total_output_coins > total_input_coins:
         flag = False
