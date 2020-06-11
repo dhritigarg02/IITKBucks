@@ -39,5 +39,7 @@ def ValidateTxn(Txn, unused_outputs):
 
             flag = False
             return flag
+        
+    return flag
 
 
