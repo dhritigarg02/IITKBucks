@@ -26,7 +26,7 @@ def ValidateTxn(Txn, unused_outputs):
     for Input in Txn.inputs:
         try:
             verifier = pss.new(unused_outputs[Input.transID][Input.index]["Publickey"])
-            data = Input.transID + Input.index.to_bytes(4, 'big') + Txn.num_outputs.to_bytes(4, 'big') + sha256(Txn.output_bytes).digest()
+            data = Input.transID + Input.index.to_bytes(4, 'big') + sha256(Txn.num_outputs.to_bytes(4, 'big') + Txn.output_bytes).digest()
             verifier.verify(data, Input.signature)
 
             temp_used_outputs[Input.transID][Input.index] = unused_outputs[Input.transID].pop[Input.index]
