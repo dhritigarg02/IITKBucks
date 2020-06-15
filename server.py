@@ -4,8 +4,10 @@ from flask import Flask, request, jsonify, Response
 
 app = Flask(__name__)
 
+my_peers = []
+
 @app.route('/getBlock/<num>')
-def return_block(int(num)):
+def return_block(num):
     req_block= open('blockchain/block' + str(num), 'rb').read()
     r = Response(response = req_block, mimetype = 'application/octet-stream')
     r.headers['Content-Type'] = 'application/octet-stream'
@@ -13,7 +15,7 @@ def return_block(int(num)):
 
 @app.route('/getPendingTransactions')
 def txns():
-    pendingtxns = get_pending_txns()
+    pendingtxns = pendingtxns._list_
     pendingtxnsdict = {"transactions":[]}
 
     for txn in pendingtxns:
@@ -24,6 +26,28 @@ def txns():
     r = Respose(response = jsonify(pendingtxnsdict), mimetype = 'application/json')
     r.headers['Content-Type'] = 'application/json'
     return r
+
+@app.route('/newPeer', methods = ['POST'])
+def _newpeer_():
+    url = request.get_json()
+    my_peers.append(url['url'])
+    return 'Added ' + url['url'] + ' successfully!'
+
+@app.route('/getPeers')
+def getPeers():
+    return jsonify({"peers":my_peers})
+
+@app.route('/newBlock', methods = ['POST'])
+def newBlock():
+    blockData = request.get_data()
+    blockchain.add_block(blockData)
+    return 'Added Block to Blockchain successfully!'
+
+@app.route('/newTransaction', methods = ['POST'])
+def newTxn():
+    data = request.get_json()
+    pendingTxns.add(data)
+    return 'Added Txn to list of pending Txns'
 
 if __name__ == '__main__':
     app.run(host = '', port = 2020, debug = True)
