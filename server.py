@@ -29,9 +29,15 @@ def txns():
 
 @app.route('/newPeer', methods = ['POST'])
 def _newpeer_():
-    url = request.get_json()
-    my_peers.append(url['url'])
-    return 'Added ' + url['url'] + ' successfully!'
+    if len(my_peers) < 5:
+        url = request.get_json()
+        if url['url'] not in my_peers:
+            my_peers.append(url['url'])
+            return 'Added ' + url['url'] + ' successfully!'
+        else:
+            return 'Peer already added!'
+    else:
+        return 'Peer limit reached, cannot add more peers', 500
 
 @app.route('/getPeers')
 def getPeers():
