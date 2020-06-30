@@ -6,7 +6,7 @@ from hashlib import sha256
 
 class block:
 
-    def newBlock(self, index, parent_hash, target, body):
+    def new(self, index, parent_hash, target, body):
 
         self.index = index
         self.parent_hash = parent_hash
@@ -15,7 +15,7 @@ class block:
         self.body_hash = sha256(self.body).digest()
         parsebody(self)
 
-    def block_from_bytes(blockbytes):
+    def from_bytes(self, blockbytes):
         
         curr_index = 0
         with blockbytes as bb, curr_index as ci:
@@ -80,7 +80,7 @@ class block:
                 #print('Time taken to find nonce: ',int(time_taken/60),'m',int(time_taken%60), 's')
                 break
 
-    def VerifyBlock(self, unused_outputs):
+    def Verify(self, unused_outputs):
 
         def get_prev_hash(index):
             if index == -1:
@@ -102,13 +102,16 @@ class block:
                 flag, unused_outputs = txn.ValidateTxn(unused_outputs)
                 if flag == False:
                     return flag
+        return True, unused_outputs
 
-    def processBlock(self, unused_outputs):
+    def process(self, unused_outputs):
 
         for i, output in enumerate(txn.outputs):
             unused_outputs[txn.ID][i] = {"Publickey":self.publickey, "coins":self.amount}
 
         return unused_outputs
+
+
 
 
 
