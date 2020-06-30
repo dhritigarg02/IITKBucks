@@ -45,8 +45,12 @@ class block:
             for i in range(num_txns):
                 size_txn = int.from_bytes(bb[ci:ci+4], 'big')
                 ci += 4
-                Transaction = Tx()
-                Transaction.TxnfromBytes(bb[ci:ci+size_txn])
+                if i == 0:
+                    Transaction = Coinbase()
+                    Transaction.fromBytes(bb[ci:ci+size_txn])
+                else:
+                    Transaction = Tx()
+                    Transaction.TxnfromBytes(bb[ci:ci+size_txn])
                 ci += size_txn
 
                 txns.append(Transaction)
@@ -91,10 +95,13 @@ class block:
         if not bytearray(sha256(self.body).digest()) == bytearray(self.body_hash):
             return False
 
-        for txn in self.transactions:
-            flag, unused_outputs = txn.ValidateTxn(unused_outputs)
-            if flag == False:
-                return flag
+        for i, txn in enumerate(self.transactions):
+            if i == 0:
+                pass
+            else:
+                flag, unused_outputs = txn.ValidateTxn(unused_outputs)
+                if flag == False:
+                    return flag
 
     def processBlock(self, unused_outputs):
 
