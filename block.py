@@ -3,13 +3,15 @@
 import hashlib
 import time
 from hashlib import sha256
+from tx import Output, Input, Tx, Coinbase, PendingTxns
 
 class block:
 
-    def new(self, index, parent_hash, target, body):
+    def new(self, index, target, body):
 
         self.index = index
-        self.parent_hash = parent_hash
+        fh = open('blockchain/block' + str(index-1) , 'rb')
+        self.parent_hash = sha256(fh.read(116)).digest()
         self.target = target
         self.body = body
         self.body_hash = sha256(self.body).digest()
@@ -32,8 +34,10 @@ class block:
             self.nonce = int.from_bytes(bb[ci:ci+8], 'big')
             ci += 8
             self.body = bb[ci:]
+            self.body_hash = sha256(self.body).digest()
             parsebody(self)
             self.hash = sha256(bb[0:116]).digest()
+            self.header = bb[0:116]
 
     def parsebody(self):
         
@@ -56,9 +60,9 @@ class block:
                 txns.append(Transaction)
             self.transactions = txns
 
-    def mine(self, max_nonce):
+    def mine(self, queueflag):
 
-        max_nonce = 100000000000
+        max_nonce = 10000000000000
         self.header = index.to_bytes(4, 'big') + self.parent_hash + self.body_hash + self.target.to_bytes(32, 'big')
 
         h = sha256()
@@ -67,26 +71,33 @@ class block:
         for nonce in range(max_nonce):
 
             h_copy = h.copy()
+            if nonce % 100 == 0:
+                try:
+                    queueflag.get_nowait()
+                    return False
+                except:
+                    pass
             timestamp = time.time_ns()
             h_copy.update(timestamp.to_bytes(8, 'big') + nonce.to_bytes(8, 'big'))
 
             if int.from_bytes(h_copy.digest(), 'big') < self.target:
 
-                #time_taken = time.time() - start_time
+                time_taken = time.time() - start_time
                 self.header = self.header + timestamp.to_bytes(8, 'big') + nonce.to_bytes(8, 'big')
                 self.hash = h_copy.hexdigest()
                 self.timestamp = timestamp
                 self.nonce = nonce
-                #print('Time taken to find nonce: ',int(time_taken/60),'m',int(time_taken%60), 's')
-                break
+                print('Time taken to find nonce: ',int(time_taken/60),'m',int(time_taken%60), 's')
+                return True
+        
 
-    def Verify(self, unused_outputs):
+    def Verify(self, Blockchain):
 
         def get_prev_hash(index):
             if index == -1:
                 return bytes.fromhex('0'*64)
-            block = open('blockchain/block' + str(index), 'rb').read()
-            return sha256(block[0:116]).digest()
+            hash = Blockchain.chain[index].hash
+            return hash
 
         if not bytearray(self.parent_hash) == bytearray(get_prev_hash(self.index-1)):
             return False
@@ -95,21 +106,69 @@ class block:
         if not bytearray(sha256(self.body).digest()) == bytearray(self.body_hash):
             return False
 
+        unused_outputs = Blockchain.unused_outputs
         for i, txn in enumerate(self.transactions):
             if i == 0:
-                pass
+                self.Total_fees = getTotalBlockFees(self, unused_outputs)
+                if not txn.output.amount == self.block_reward + self.Total_fees:
+                    return False
             else:
-                flag, unused_outputs = txn.ValidateTxn(unused_outputs)
-                if flag == False:
-                    return flag
-        return True, unused_outputs
+                flag, unused_outputs = txn.VerifyTxn(unused_outputs)
+                if not flag:
+                    return False
+    
+        return True
 
-    def process(self, unused_outputs):
+    def process(self, Blockchain):
+        
+        for txn in self.transactions:
+            txn.processTxn(Blockchain)
+        fh = open('blockchain/block' + str(Blockchain.current_index), 'wb')
+        fh.write(self.header + self.body)
+        fh.close()
 
-        for i, output in enumerate(txn.outputs):
-            unused_outputs[txn.ID][i] = {"Publickey":self.publickey, "coins":self.amount}
+        return unused_outputs, PendingTxns
 
-        return unused_outputs
+    def getTotalBlockFees(self, unused_outputs):
+
+        Total_fees = 0
+        try:
+            for txn in self.transactions[1:]:
+                txnFees = txn.getTxnFees(unused_outputs)
+                Total_fees += txnFees
+        except:
+            pass
+
+        return Total_fees
+
+class Blockchain:
+
+    def __init__(self, my_peers):
+
+        self.chain = []
+        self.current_index = 0
+        self.unused_outputs = []
+        self.PendingTxns = PendingTxns()
+        self.peers = my_peers
+        self.target = int.from_bytes(bytes.fromhex('0'*7+'f'+'0'*56), 'big')
+
+    def addBlock(self, block):
+
+        flag = block.Verify(self.unused_outputs)
+
+        if flag:
+            block.process(self)
+            self.chain.append(block)
+            self.current_index += 1
+            return True
+        else:
+            return False
+
+
+
+
+
+
 
 
 
