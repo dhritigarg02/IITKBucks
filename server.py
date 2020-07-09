@@ -51,7 +51,6 @@ def newBlock():
     newblock = block()
     newblock.from_bytes(blockData.content)
     flag = Blockchain.addBlock(newblock)
-    post_new_block(newblock)
 
     thread = Thread(target = Worker, args = [Blockchain, queueflag])
     thread.start()

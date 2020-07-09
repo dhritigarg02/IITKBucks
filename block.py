@@ -4,6 +4,7 @@ import hashlib
 import time
 from hashlib import sha256
 from tx import Output, Input, Tx, Coinbase, PendingTxns
+import requests
 
 class block:
 
@@ -159,7 +160,17 @@ class Blockchain:
         if flag:
             block.process(self)
             self.chain.append(block)
+
+            fh = open('blockchain/block' + str(self.current_index), 'wb')
+            fh.write(block.header + block.body)
+            fh.close()
+
             self.current_index += 1
+            for peer in self.peers:
+                r = requests.post(peer + '/newBlock', 
+                        data = block.header + block.body, 
+                        headers = {'Content-Type' : 'application/octet-stream'})
+
             return True
         else:
             return False
