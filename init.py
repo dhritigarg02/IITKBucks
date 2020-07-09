@@ -88,7 +88,6 @@ def Worker(Blockchain, queueflag):
         flag = my_block.mine(queueflag)
         if flag:
             flag = Blockchain.addBlock(my_block)
-            post_new_block(my_block)
         else:
             return False
 
