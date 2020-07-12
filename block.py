@@ -152,6 +152,8 @@ class Blockchain:
         self.PendingTxns = PendingTxns()
         self.peers = my_peers
         self.target = int.from_bytes(bytes.fromhex('0'*7+'f'+'0'*56), 'big')
+        self.alias_map = {}
+        self.unused_outputs_by_key = {}
 
     def addBlock(self, block):
 

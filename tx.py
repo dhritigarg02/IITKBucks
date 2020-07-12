@@ -103,7 +103,7 @@ class Tx:
         def revert(unused_outputs, temp_used_outputs):
             for transId in temp_used_outputs:
                 if transID in unused_outputs:
-                    unused_outputs.update(temp_used_outputs[transID])
+                    unused_outputs[transID].update(temp_used_outputs[transID])
                 else:
                     unused_outputs[transID] = temp_used_outputs[transID]
 
@@ -137,8 +137,14 @@ class Tx:
 
         for Input in self.inputs:
             Blockchain.unused_outputs[Input.transID].pop[Input.Index]
-        for i, output in enumerate(selfoutputs):
+        for i, output in enumerate(self.outputs):
             Blockchain.unused_outputs[self.ID][i] = {"Publickey":output.publickey, "coins":output.amount}
+       
+            if output.publickey in Blockchain.unused_outputs_by_key:
+                Blockchain.unused_outputs_by_key[output.publickey].append({"transactionID":self.ID, "index":i, "amount":output.amount})
+            else:
+                Blockchain.unused_outputs_by_key[output.publickey] = [{"transactionID":self.ID, "index":i, "amount":output.amount}]
+            
         Blockchain.PendingTxns.remove(self)
 
     def getTxnFees(self, unused_outputs):
