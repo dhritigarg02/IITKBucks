@@ -32,34 +32,39 @@ def findPeers(main_url, my_url):
 def getBlockchain(my_peers):
 
     block_num = 0
-    #peer = random.choice(my_peers)
-    #r = requests.get(peer + '/getBlock/0')
+    peer = random.choice(my_peers)
+    r = requests.get(peer + '/getBlock/0')
     #print(r.content)
-    block0 = open('blockchain/block0', 'rb').read()
+    #block0 = open('block0', 'rb').read()
     genesis_block = block()
-    #genesis_block.from_bytes(r.content)
-    genesis_block.from_bytes(block0)
+    genesis_block.from_bytes(r.content)
+    #genesis_block.from_bytes(block0)
     my_Blockchain = Blockchain(my_peers)
     my_Blockchain.block_reward = genesis_block.transactions[0].outputs[0].amount
     flag = my_Blockchain.addBlock(genesis_block)
+    print(block_num)
     block_num += 1
     #print(my_Blockchain.unused_outputs)
 
-    block1 = open('blockchain/block1', 'rb').read()
+    '''
+    block1 = open('block1', 'rb').read()
     nblock = block()
     nblock.from_bytes(block1)
     flag = my_Blockchain.addBlock(nblock)
     block_num += 1
 
     '''
-    while r.status_code == 200 and flag:
+    while flag:
         peer = random.choice(my_peers)
         r = requests.get(peer + '/getBlock/' + str(block_num))
-        nblock = block()
-        nblock.from_bytes(r.content)
-        flag = my_Blockchain.addBlock(nblock)
-        block_num += 1
-    '''
+        if r.status_code == 200:
+            nblock = block()
+            nblock.from_bytes(r.content)
+            flag = my_Blockchain.addBlock(nblock)
+            print(block_num)
+            block_num += 1
+        else:
+            flag = False
 
     return my_Blockchain
 

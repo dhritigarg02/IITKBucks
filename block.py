@@ -5,6 +5,7 @@ import time
 from hashlib import sha256
 from tx import Output, Input, Tx, PendingTxns
 import requests
+import copy
 
 class block:
 
@@ -19,7 +20,7 @@ class block:
         self.parsebody()
 
     def from_bytes(self, bb):
-        # bb stands for blockbytes, ci for curret_index
+        # bb stands for blockbytes, ci for current_index
         ci = 0
         self.index = int.from_bytes(bb[ci:ci+4], 'big')
         ci += 4
@@ -104,7 +105,8 @@ class block:
             print('body hash wrong')
             return False
         
-        unused_outputs = Blockchain.unused_outputs
+        unused_outputs = copy.deepcopy(Blockchain.unused_outputs)
+
         for i, txn in enumerate(self.transactions):
             if i == 0:
                 self.Total_fees = self.getTotalBlockFees(unused_outputs)
@@ -116,7 +118,6 @@ class block:
                 flag, unused_outputs = txn.VerifyTxn(unused_outputs)
                 if not flag:
                     return False
-    
         return True
 
     def process(self, Blockchain):
@@ -154,6 +155,7 @@ class Blockchain:
 
         flag = block.Verify(self)
         #print(flag)
+        #print(self.unused_outputs)
 
         if flag:
             block.process(self)

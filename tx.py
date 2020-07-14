@@ -2,7 +2,7 @@
 
 from struct import *
 from hashlib import sha256
-from Crypto.Signature import pss
+from Crypto.Signature import PKCS1_PSS
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 import random
@@ -128,16 +128,16 @@ class Tx:
         for Input in self.inputs:
             #try:
             publickey = RSA.import_key(unused_outputs[Input.transID][Input.index]["Publickey"])
-            verifier = pss.new(publickey)
+            verifier = PKCS1_PSS.new(publickey)
             data = Input.transID + Input.index.to_bytes(4, 'big') + sha256(self.num_outputs.to_bytes(4, 'big') + self.output_bytes).digest()
             h = SHA256.new(data)
             verifier.verify(h, Input.signature)
 
             if Input.transID in temp_used_outputs:
-                temp_used_outputs[Input.transID][Input.index] = unused_outputs[Input.transID].pop[Input.index]
+                temp_used_outputs[Input.transID][Input.index] = unused_outputs[Input.transID].pop(Input.index)
             else:
                 temp_used_outputs[Input.transID] = {}
-                temp_used_outputs[Input.transID][Input.index] = unused_outputs[Input.transID].pop[Input.index]
+                temp_used_outputs[Input.transID][Input.index] = unused_outputs[Input.transID].pop(Input.index)
 
             #except:
                 #unused_outputs = revert(unused_outputs, temp_used_outputs)
@@ -147,8 +147,10 @@ class Tx:
 
     def processTxn(self, Blockchain):
 
+        #print(Blockchain.unused_outputs)
         for Input in self.inputs:
-            Blockchain.unused_outputs[Input.transID].pop[Input.Index]
+            #print(Input.index)
+            Blockchain.unused_outputs[Input.transID].pop(Input.index)
 
         Blockchain.unused_outputs[self.ID] = {}
         for i, output in enumerate(self.outputs):
