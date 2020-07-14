@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from flask import Flask, request, jsonify, Response
-from init import init, Worker, post_new_block
+from init import init, Worker
 from threading import Thread
 from queue import Queue
 from block import block
@@ -9,7 +9,7 @@ import requests
 
 app = Flask(__name__)
 
-main_url = None
+main_url = 'https://iitkbucks.pclub.in'
 my_url = None
 Blockchain = init(main_url, my_url)
 queueflag = Queue()
@@ -18,7 +18,7 @@ thread.start()
 
 @app.route('/getBlock/<num>')
 def return_block(num):
-    req_block= open('blockchain/block' + str(num), 'rb').read()
+    req_block = open('blockchain/block' + str(num), 'rb').read()
     r = Response(response = req_block, mimetype = 'application/octet-stream')
     return r
 
@@ -50,7 +50,7 @@ def newBlock():
     queueflag.put(True)
     thread.join()
     newblock = block()
-    newblock.from_bytes(blockData.content)
+    newblock.from_bytes(blockData)
     flag = Blockchain.addBlock(newblock)
 
     thread = Thread(target = Worker, args = [Blockchain, queueflag])

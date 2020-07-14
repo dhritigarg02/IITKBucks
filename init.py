@@ -2,9 +2,9 @@
 
 import requests
 import random
-from block import block
+from block import block, Blockchain
 import time
-from tx import Coinbase, PendingTxns
+from tx import PendingTxns
 
 def findPeers(main_url, my_url):
     my_peers = []
@@ -32,30 +32,43 @@ def findPeers(main_url, my_url):
 def getBlockchain(my_peers):
 
     block_num = 0
-    peer = random.choice(my_peers)
-    r = requests.get(peer + '/getBlock/0')
-
+    #peer = random.choice(my_peers)
+    #r = requests.get(peer + '/getBlock/0')
+    #print(r.content)
+    block0 = open('blockchain/block0', 'rb').read()
     genesis_block = block()
-    genesis_block.from_bytes(r.content)
-    Blockchain = Blockchain(my_peers)
-    flag = Blockchain.addBlock(genesis_block)
+    #genesis_block.from_bytes(r.content)
+    genesis_block.from_bytes(block0)
+    my_Blockchain = Blockchain(my_peers)
+    my_Blockchain.block_reward = genesis_block.transactions[0].outputs[0].amount
+    flag = my_Blockchain.addBlock(genesis_block)
+    block_num += 1
+    #print(my_Blockchain.unused_outputs)
+
+    block1 = open('blockchain/block1', 'rb').read()
+    nblock = block()
+    nblock.from_bytes(block1)
+    flag = my_Blockchain.addBlock(nblock)
     block_num += 1
 
+    '''
     while r.status_code == 200 and flag:
         peer = random.choice(my_peers)
         r = requests.get(peer + '/getBlock/' + str(block_num))
-        block = block()
-        block.from_bytes(r.content)
-        flag = Blockchain.addBlock(block)
+        nblock = block()
+        nblock.from_bytes(r.content)
+        flag = my_Blockchain.addBlock(nblock)
         block_num += 1
+    '''
 
-    return Blockchain
+    return my_Blockchain
 
 def init(main_url, my_url):
 
-    my_peers = findPeers(main_url, my_url)
+    #my_peers = findPeers(main_url, my_url)
+    my_peers = [main_url]
     Blockchain = getBlockchain(my_peers)
-    Blockchain.PendingTxns.get(my_peers)
+    #Blockchain.PendingTxns.get(my_peers)
     Blockchain.my_url = my_url
 
     return Blockchain
@@ -78,8 +91,9 @@ def Worker(Blockchain, queueflag):
             accumulator += txn._bytes_
             BlockFees += txn.getTxnFees(Blockchain.unused_outputs)
 
-        coinbase = Coinbase()
-        coinbase.new(BlockFees)
+        coinbase_output = Output(BlockFees + Blockchain.block_reward, PUBLICKEY)
+        coinbase = Tx()
+        Tx.newTxn([], [coinbase_output])
         body = num_txns.to_bytes(4, 'big') + coinbase.size + coinbase._bytes_ + accumulator
 
         my_block = block()
@@ -90,10 +104,6 @@ def Worker(Blockchain, queueflag):
             flag = Blockchain.addBlock(my_block)
         else:
             return False
-
-def post_new_block(block):
-
-    print(block.header)
 
 
 

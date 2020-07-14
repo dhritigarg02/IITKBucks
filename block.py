@@ -3,7 +3,7 @@
 import hashlib
 import time
 from hashlib import sha256
-from tx import Output, Input, Tx, Coinbase, PendingTxns
+from tx import Output, Input, Tx, PendingTxns
 import requests
 
 class block:
@@ -16,50 +16,44 @@ class block:
         self.target = target
         self.body = body
         self.body_hash = sha256(self.body).digest()
-        parsebody(self)
+        self.parsebody()
 
-    def from_bytes(self, blockbytes):
-        
-        curr_index = 0
-        with blockbytes as bb, curr_index as ci:
-            self.index = int.from_bytes(bb[ci:ci+4], 'big')
-            ci += 4
-            self.parent_hash = bb[ci:ci+32]
-            ci += 32
-            self.body_hash = bb[ci:ci+32]
-            ci += 32
-            self.target = bb[ci:ci+32]
-            ci += 32
-            self.timestamp = int.from_bytes(bb[ci:ci+8], 'big')
-            ci += 8
-            self.nonce = int.from_bytes(bb[ci:ci+8], 'big')
-            ci += 8
-            self.body = bb[ci:]
-            self.body_hash = sha256(self.body).digest()
-            parsebody(self)
-            self.hash = sha256(bb[0:116]).digest()
-            self.header = bb[0:116]
+    def from_bytes(self, bb):
+        # bb stands for blockbytes, ci for curret_index
+        ci = 0
+        self.index = int.from_bytes(bb[ci:ci+4], 'big')
+        ci += 4
+        self.parent_hash = bb[ci:ci+32]
+        ci += 32
+        self.body_hash = bb[ci:ci+32]
+        ci += 32
+        self.target = bb[ci:ci+32]
+        ci += 32
+        self.timestamp = int.from_bytes(bb[ci:ci+8], 'big')
+        ci += 8
+        self.nonce = int.from_bytes(bb[ci:ci+8], 'big')
+        ci += 8
+        self.body = bb[ci:]
+        self.parsebody()
+        self.hash = sha256(bb[0:116]).digest()
+        self.header = bb[0:116]
 
     def parsebody(self):
         
         ci = 0
-        with self.body as bb:
-            self.num_txns = int.from_bytes(bb[ci:ci+4], 'big')
+        bb = self.body
+        self.num_txns = int.from_bytes(bb[ci:ci+4], 'big')
+        ci += 4
+        txns = []
+        for i in range(self.num_txns):
+            size_txn = int.from_bytes(bb[ci:ci+4], 'big')
             ci += 4
-            txns = []
-            for i in range(num_txns):
-                size_txn = int.from_bytes(bb[ci:ci+4], 'big')
-                ci += 4
-                if i == 0:
-                    Transaction = Coinbase()
-                    Transaction.fromBytes(bb[ci:ci+size_txn])
-                else:
-                    Transaction = Tx()
-                    Transaction.TxnfromBytes(bb[ci:ci+size_txn])
-                ci += size_txn
+            Transaction = Tx()
+            Transaction.TxnfromBytes(bb[ci:ci+size_txn])
+            ci += size_txn
 
-                txns.append(Transaction)
-            self.transactions = txns
+            txns.append(Transaction)
+        self.transactions = txns
 
     def mine(self, queueflag):
 
@@ -101,17 +95,22 @@ class block:
             return hash
 
         if not bytearray(self.parent_hash) == bytearray(get_prev_hash(self.index-1)):
+            print('wrong hash!')
             return False
-        if not int.from_bytes(self.hash, 'big') < self.target :
+        if not int.from_bytes(self.hash, 'big') < int.from_bytes(self.target, 'big') :
+            print('target not reached!')
             return False
         if not bytearray(sha256(self.body).digest()) == bytearray(self.body_hash):
+            print('body hash wrong')
             return False
-
+        
         unused_outputs = Blockchain.unused_outputs
         for i, txn in enumerate(self.transactions):
             if i == 0:
-                self.Total_fees = getTotalBlockFees(self, unused_outputs)
-                if not txn.output.amount == self.block_reward + self.Total_fees:
+                self.Total_fees = self.getTotalBlockFees(unused_outputs)
+                #print(Blockchain.block_reward, self.Total_fees)
+                #print(txn.outputs[0].amount)
+                if not txn.outputs[0].amount == Blockchain.block_reward + self.Total_fees:
                     return False
             else:
                 flag, unused_outputs = txn.VerifyTxn(unused_outputs)
@@ -128,17 +127,12 @@ class block:
         fh.write(self.header + self.body)
         fh.close()
 
-        return unused_outputs, PendingTxns
-
     def getTotalBlockFees(self, unused_outputs):
 
         Total_fees = 0
-        try:
-            for txn in self.transactions[1:]:
-                txnFees = txn.getTxnFees(unused_outputs)
-                Total_fees += txnFees
-        except:
-            pass
+        for txn in self.transactions[1:]:
+            txnFees = txn.getTxnFees(unused_outputs)
+            Total_fees += txnFees
 
         return Total_fees
 
@@ -148,16 +142,18 @@ class Blockchain:
 
         self.chain = []
         self.current_index = 0
-        self.unused_outputs = []
+        self.unused_outputs = {}
         self.PendingTxns = PendingTxns()
         self.peers = my_peers
-        self.target = int.from_bytes(bytes.fromhex('0'*7+'f'+'0'*56), 'big')
+        self.target = int.from_bytes(bytes.fromhex('0'*5+'f'+'0'*58), 'big')
         self.alias_map = {}
         self.unused_outputs_by_key = {}
+        self.block_reward = None
 
     def addBlock(self, block):
 
-        flag = block.Verify(self.unused_outputs)
+        flag = block.Verify(self)
+        #print(flag)
 
         if flag:
             block.process(self)
@@ -166,7 +162,7 @@ class Blockchain:
             fh = open('blockchain/block' + str(self.current_index), 'wb')
             fh.write(block.header + block.body)
             fh.close()
-
+            #print(self.current_index)
             self.current_index += 1
             for peer in self.peers:
                 r = requests.post(peer + '/newBlock', 
