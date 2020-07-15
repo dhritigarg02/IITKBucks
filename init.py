@@ -45,7 +45,6 @@ def getBlockchain(my_peers):
     print(block_num)
     block_num += 1
     #print(my_Blockchain.unused_outputs)
-
     '''
     block1 = open('block1', 'rb').read()
     nblock = block()
@@ -61,7 +60,7 @@ def getBlockchain(my_peers):
             nblock = block()
             nblock.from_bytes(r.content)
             flag = my_Blockchain.addBlock(nblock)
-            print(block_num)
+            if flag: print(block_num)
             block_num += 1
         else:
             flag = False

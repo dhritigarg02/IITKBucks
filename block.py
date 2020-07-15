@@ -45,16 +45,15 @@ class block:
         bb = self.body
         self.num_txns = int.from_bytes(bb[ci:ci+4], 'big')
         ci += 4
-        txns = []
+        self.transactions = []
+        print('Number of transactions: ', self.num_txns)
         for i in range(self.num_txns):
             size_txn = int.from_bytes(bb[ci:ci+4], 'big')
             ci += 4
             Transaction = Tx()
             Transaction.TxnfromBytes(bb[ci:ci+size_txn])
             ci += size_txn
-
-            txns.append(Transaction)
-        self.transactions = txns
+            self.transactions.append(Transaction)
 
     def mine(self, queueflag):
 

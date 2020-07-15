@@ -74,6 +74,7 @@ class Tx:
             index = int.from_bytes(bb[ci:ci+4], 'big')
             ci += 4
             len_signature = int.from_bytes(bb[ci:ci+4], 'big')
+            #print('Len of signature: ', len_signature)
             ci += 4
             signature = bb[ci:ci+len_signature]
             ci += len_signature
@@ -95,11 +96,19 @@ class Tx:
 
         self.TxnToBytes()
 
-    def TxnfromJson(self, json):
+    def TxnfromJson(self, txn):
 
-        inputs = [Input(x["transactionID"], x["index"], x["signature"]) for x in txn["inputs"]]
-        outputs = [Output(x["amount"], x["publickey"]) for x in txn["outputs"]]
+        inputs = [Input(x["transactionId"], x["index"], x["signature"]) for x in txn["inputs"]]
+        outputs = [Output(x["amount"], x["recipient"]) for x in txn["outputs"]]
         self.newTxn(inputs, outputs)
+
+    def toJson(self):
+
+        json = {}
+        json['inputs'] = [{'transactionId': x.transID, 'index': x.index, 'signature': x.signature} for x in self.inputs]
+        json['outputs'] = [{'amount': x.amount, 'recipient':x.publickey} for x in self.outputs]
+
+        return json
 
     def VerifyTxn(self, unused_outputs):
 
@@ -107,17 +116,9 @@ class Tx:
         total_output_coins = 0
         temp_used_outputs = {}
 
-        def revert(unused_outputs, temp_used_outputs):
-            for transId in temp_used_outputs:
-                if transID in unused_outputs:
-                    unused_outputs[transID].update(temp_used_outputs[transID])
-                else:
-                    unused_outputs[transID] = temp_used_outputs[transID]
-
-            return unused_outputs
-
         try:
             txn_fees = self.getTxnFees(unused_outputs)
+            print(txn_fees)
             if not txn_fees >= 0:
                 print('!!')
                 return False, unused_outputs
@@ -126,22 +127,24 @@ class Tx:
             return False, unused_outputs
 
         for Input in self.inputs:
-            #try:
+
             publickey = RSA.import_key(unused_outputs[Input.transID][Input.index]["Publickey"])
             verifier = PKCS1_PSS.new(publickey)
             data = Input.transID + Input.index.to_bytes(4, 'big') + sha256(self.num_outputs.to_bytes(4, 'big') + self.output_bytes).digest()
+            print('\n', len(data), '\n')
+            print('\n', unused_outputs[Input.transID][Input.index]["Publickey"].hex(), '\n')
+            print('\n', data.hex(), '\n')
+            print('\n', Input.signature.hex(), '\n')
             h = SHA256.new(data)
-            verifier.verify(h, Input.signature)
-
-            if Input.transID in temp_used_outputs:
-                temp_used_outputs[Input.transID][Input.index] = unused_outputs[Input.transID].pop(Input.index)
+            if verifier.verify(h, Input.signature):
+                if Input.transID in temp_used_outputs:
+                    temp_used_outputs[Input.transID][Input.index] = unused_outputs[Input.transID].pop(Input.index)
+                else:
+                    temp_used_outputs[Input.transID] = {}
+                    temp_used_outputs[Input.transID][Input.index] = unused_outputs[Input.transID].pop(Input.index)
             else:
-                temp_used_outputs[Input.transID] = {}
-                temp_used_outputs[Input.transID][Input.index] = unused_outputs[Input.transID].pop(Input.index)
-
-            #except:
-                #unused_outputs = revert(unused_outputs, temp_used_outputs)
-                #return False, unused_outputs
+                print('signature not verified!')
+                return False, unused_outputs
 
         return True, unused_outputs
 

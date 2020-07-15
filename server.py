@@ -61,19 +61,20 @@ def newBlock():
 @app.route('/addAlias', methods = ['POST'])
 def alias():
     alias_data = request.get_json()
-    if alias_data['publickey'] in Blockchain.alias_map.values() :
+    if alias_data['alias'] in Blockchain.alias_map:
         return 'Alias already set!', 400
     else:
         Blockchain.alias_map[alias_data['alias']] = alias_data['publickey']
         for peer in Blockchain.peers:
             r = requests.post(peer + '/addAlias', json = jsonify(alias_data)) 
-        return 'Set alias successfully!', 200
+        return 'Alias set successfully!', 200
 
 @app.route('/getPublicKey', methods = ['POST'])
 def return_pubkey():
     data = request.get_json()
     if data['alias'] in Blockchain.alias_map:
-        return Blockchain.alias_map[data['alias']]
+        data = {'publicKey': Blockchain.alias_map[data['alias']]}
+        return jsonify(data), 200
     else:
         return 'Not found!', 404
 
