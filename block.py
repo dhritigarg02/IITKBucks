@@ -3,7 +3,7 @@
 import hashlib
 import time
 from hashlib import sha256
-from tx import Output, Input, Tx, PendingTxns
+from Tx_classes import Output, Input, Tx, PendingTxns
 import requests
 import copy
 from parser import printBlock

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 from flask import Flask, request, jsonify, Response
-from init import init, Worker
+from init import init
+from worker import Worker
 from threading import Thread
 from queue import Queue
 from block import block

@@ -3,7 +3,7 @@
 from Crypto.Signature import PKCS1_PSS
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
-from tx import Input, Output, Tx
+from Tx_classes import Input, Output, Tx
 from hashlib import  sha256
 
 def BuildTxn(Txn):
